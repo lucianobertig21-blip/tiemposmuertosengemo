@@ -323,9 +323,10 @@ if(isAuthed()){loginCard.style.display="none";appCard.style.display="block";rend
 <script>
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("/sw.js");
+    navigator.serviceWorker.register("../sw.js", { scope: "../" });
   });
 }
 </script>
+
 </body>
 </html>
