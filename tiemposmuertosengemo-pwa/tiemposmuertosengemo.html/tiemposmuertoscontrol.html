@@ -1,0 +1,331 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#0d0d1a">
+
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Control de Tiempos Muertos</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/tiemposmuertos.css" />
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js"></script>
+</head>
+
+<body>
+<div class="wrap">
+  <div class="headerRow">
+    <img src="img/logoengemo.png" alt="Engemo" class="logoHeader" />
+    <h1>Control de Tiempos Muertos</h1>
+  </div>
+  <p class="status">Acceso restringido</p>
+
+  <!-- LOGIN -->
+  <div id="loginCard" class="card">
+    <strong>Iniciar sesión</strong>
+    <div class="grid" style="margin-top:10px">
+      <div><label>Usuario</label><input id="user" type="text" placeholder="Usuario"></div>
+      <div><label>Contraseña</label><input id="pass" type="password" placeholder="Contraseña"></div>
+      <div class="row" style="justify-content:center;"><button id="btnLogin" class="btn primary">Ingresar</button></div>
+      <p id="loginMsg" style="color:#dc2626;display:none;text-align:center;">Usuario o contraseña incorrectos.</p>
+    </div>
+  </div>
+
+  <!-- APP -->
+  <div id="appCard" class="card" style="display:none;text-align:center;">
+    <div class="row" style="justify-content:center;margin-bottom:15px;">
+      <button id="btnOpenTM" class="btn primary">Abrir Tiempo Muerto</button>
+      <button id="btnHist" class="btn">Ver Historial</button>
+    </div>
+
+    <h3 class="sectionTitle">Tiempos muertos abiertos</h3>
+    <p class="muted">Click sobre una fila para responder o cerrar.</p>
+    <div id="emptyState" class="muted">No hay tiempos muertos abiertos.</div>
+
+    <div class="tableWrap">
+      <table id="tmTable" class="table">
+        <thead>
+          <tr><th>Sector</th><th>Equipo</th><th>Motivo</th><th>Responsable</th><th>Estado</th><th>Inicio</th><th>Tiempo Total</th></tr>
+        </thead>
+        <tbody id="tmTbody"></tbody>
+      </table>
+    </div>
+    <div style="margin-top:15px;">
+      <button id="btnLogout" class="btn danger">Cerrar sesión</button>
+    </div>
+  </div>
+
+  <footer>2025 Nordex</footer>
+</div>
+
+<!-- ===== MODAL ABRIR ===== -->
+<div id="modalOpen" class="modalOverlay">
+  <div class="modal">
+    <div class="modalHeader"><strong>Abrir tiempo muerto</strong><button data-close="modalOpen" class="iconBtn">✕</button></div>
+    <div class="grid">
+      <div>
+        <label>Sector</label>
+        <input id="inpSector" list="dlSector" placeholder="Ej: K0 / X250/FORD">
+        <datalist id="dlSector">
+          <option value="K0">
+          <option value="X250/FORD">
+        </datalist>
+      </div>
+      <div>
+        <label>Equipo</label>
+        <input id="inpEquipo" list="dlEquipo" placeholder="Seleccioná sector primero" disabled>
+        <datalist id="dlEquipo"></datalist>
+      </div>
+      <div style="grid-column:1 / -1"><label>Motivo</label><textarea id="inpMotivo" rows="3"></textarea></div>
+      <div style="grid-column:1 / -1"><label>Responsable</label><input id="inpResp" type="text"></div>
+      <div class="row" style="justify-content:center;">
+        <button id="btnConfirmTM" class="btn primary">Abrir</button>
+        <button data-close="modalOpen" class="btn">Cancelar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL RESPONDER ===== -->
+<div id="modalResponder" class="modalOverlay">
+  <div class="modal">
+    <div class="modalHeader"><strong>Responder tiempo muerto</strong><button data-close="modalResponder" class="iconBtn">✕</button></div>
+    <table class="table mini" style="margin:auto;width:90%;"><tbody id="respInfoBody"></tbody></table>
+    <div class="grid" style="margin-top:10px">
+      <div>
+        <label>Técnico que responde</label>
+        <input id="inpTecnicoAsignado" list="dlTecnicos" type="text" placeholder="Seleccionar o escribir nombre">
+        <datalist id="dlTecnicos">
+          <option value="Luciano Berti 3584">
+          <option value="Mathias Gonzalez 3174">
+          <option value="Fernando Nusa 3409">
+        </datalist>
+      </div>
+      <div class="row" style="justify-content:center;">
+        <button id="btnResponder" class="btn primary">Responder</button>
+        <button data-close="modalResponder" class="btn">Cancelar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL CERRAR ===== -->
+<div id="modalCerrar" class="modalOverlay">
+  <div class="modal">
+    <div class="modalHeader"><strong>Cerrar tiempo muerto</strong><button data-close="modalCerrar" class="iconBtn">✕</button></div>
+    <table class="table mini" style="margin:auto;width:90%;"><tbody id="cerrarInfoBody"></tbody></table>
+    <div class="grid">
+      <div>
+        <label>Técnico de cierre</label>
+        <input id="inpTecnicoCierre" list="dlTecnicos" type="text" placeholder="Seleccionar o escribir nombre">
+      </div>
+      <div>
+        <label>Falla</label>
+        <select id="inpFalla">
+          <option value="">Seleccione...</option>
+          <option>Problema eléctrico</option>
+          <option>Falla mecánica</option>
+          <option>Falla operacional</option>
+        </select>
+      </div>
+      <div style="grid-column:1 / -1">
+        <label>Resolución</label>
+        <textarea id="inpResolucion" rows="3"></textarea>
+      </div>
+      <div class="row" style="justify-content:center;">
+        <button id="btnCerrarTM" class="btn primary">Cerrar</button>
+        <button data-close="modalCerrar" class="btn">Cancelar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL HISTORIAL ===== -->
+<div id="modalHist" class="modalOverlay">
+  <div class="modal" style="max-width:1100px;">
+    <div class="modalHeader"><strong>Historial de tiempos muertos</strong><button data-close="modalHist" class="iconBtn">✕</button></div>
+    <div class="filtersBar">
+      <div class="searchGroup"><input id="fQuery" type="text" placeholder="Buscar por cualquier campo..."></div>
+      <div class="dateGroup"><label>Desde</label><input id="fDesde" type="date"><label>Hasta</label><input id="fHasta" type="date"></div>
+      <div class="filtersActions"><button id="btnExcel" class="btn">⤓ Excel</button><button id="btnPDF" class="btn">⤓ PDF</button><button id="btnDelHist" class="btn danger">🗑 Eliminar</button></div>
+    </div>
+    <div class="tableWrap"><table class="table histTable"><thead><tr><th>Sector</th><th>Equipo</th><th>Motivo</th><th>Responsable</th><th>Estado</th><th>Falla</th><th>Técnico Cierre</th><th>Resolución</th><th>Inicio</th><th>Cierre</th><th>Duración</th></tr></thead><tbody id="histBody"></tbody></table></div>
+  </div>
+</div>
+
+<script>
+/* === LOGIN CON MÚLTIPLES USUARIOS === */
+const USERS = [
+  { user: "prod", pass: "nordex" },
+  { user: "mant", pass: "1234" },
+  { user: "automatismo", pass: "control" },
+  { user: "", pass: "" }
+];
+
+function isAuthed(){ return sessionStorage.getItem("auth") === "1"; }
+function setAuthed(v){ sessionStorage.setItem("auth", v ? "1" : "0"); }
+
+btnLogin.onclick = () => {
+  const u = user.value.trim();
+  const p = pass.value.trim();
+  const found = USERS.find(x => x.user === u && x.pass === p);
+
+  if (found) {
+    setAuthed(true);
+    loginMsg.style.display = "none";
+    loginCard.style.display = "none";
+    appCard.style.display = "block";
+    renderList();
+  } else {
+    loginMsg.style.display = "block";
+  }
+};
+
+
+/* === STORAGE === */
+const TM_KEY="elf16_tm_list";
+function loadTM(){try{return JSON.parse(localStorage.getItem(TM_KEY)||"[]");}catch{return[]}}
+function saveTM(l){localStorage.setItem(TM_KEY,JSON.stringify(l));}
+function genId(){return Date.now().toString(36)+Math.random().toString(36).slice(2,8);}
+function fmt(t){return t?new Date(t).toLocaleString():"—";}
+function pad2(n){return n<10?"0"+n:n;}
+function fmtDur(ms){if(!ms||ms<0)ms=0;const s=Math.floor(ms/1000),h=Math.floor(s/3600),m=Math.floor((s%3600)/60),ss=s%60;return`${pad2(h)}.${pad2(m)}.${pad2(ss)}`;}
+function badge(e){return e==="Cerrado"?'<span class="badge badge-green">Cerrado</span>':e==="Atendido"?'<span class="badge badge-orange">Atendido</span>':'<span class="badge badge-red">Sin responder</span>';}
+
+/* === LISTA PRINCIPAL === */
+const tbody=document.getElementById("tmTbody"),empty=document.getElementById("emptyState");
+function renderList(){const list=loadTM().filter(x=>x.estado!=="Cerrado").sort((a,b)=>b.createdAt-a.createdAt);tbody.innerHTML="";if(!list.length){empty.style.display="block";return;}empty.style.display="none";list.forEach(i=>{const tr=document.createElement("tr");tr.dataset.id=i.id;tr.innerHTML=`<td>${i.sector}</td><td>${i.equipo}</td><td>${i.motivo}</td><td>${i.responsable}</td><td>${badge(i.estado)}</td><td>${fmt(i.createdAt)}</td><td>${fmtDur(Date.now()-i.createdAt)}</td>`;tbody.appendChild(tr);});}
+setInterval(()=>{const list=loadTM();document.querySelectorAll("#tmTbody tr").forEach(tr=>{const i=list.find(x=>x.id===tr.dataset.id);if(i&&i.estado!=="Cerrado")tr.lastElementChild.textContent=fmtDur(Date.now()-i.createdAt);});},1000);
+
+btnLogout.onclick=()=>{setAuthed(false);location.reload();}
+btnOpenTM.onclick=()=>{inpSector.value="";inpEquipo.value="";inpEquipo.disabled=true;inpMotivo.value="";inpResp.value="";openModal("modalOpen");}
+btnHist.onclick=()=>{renderHist();openModal("modalHist");}
+
+/* === OPCIONES POR SECTOR === */
+inpSector.oninput=e=>{
+  const val=e.target.value.trim().toUpperCase();
+  dlEquipo.innerHTML="";let opciones=[];
+  if(val==="K0"){opciones=["ELF-16 A/A","ELF-16 Freno"];}
+  else if(val==="X250/FORD"){opciones=["ELF-17 Freno","ELF-17 A/A","ELF-18 Radiador","ELF-18 Freno"];}
+  opciones.forEach(v=>dlEquipo.innerHTML+=`<option value="${v}">`);
+  inpEquipo.value="";inpEquipo.disabled=opciones.length===0;
+};
+
+/* === ABRIR === */
+btnConfirmTM.onclick=()=>{
+  if(!inpSector.value||!inpEquipo.value||!inpMotivo.value||!inpResp.value)return alert("Complete todos los campos");
+  const l=loadTM();
+  const duplicado=l.find(x=>x.estado!=="Cerrado" && x.equipo===inpEquipo.value.trim() && x.sector===inpSector.value.trim());
+  if(duplicado)return alert("Ya existe un tiempo muerto abierto para ese equipo.");
+  l.push({id:genId(),sector:inpSector.value,equipo:inpEquipo.value,motivo:inpMotivo.value,responsable:inpResp.value,estado:"Sin responder",createdAt:Date.now()});
+  saveTM(l);closeModal("modalOpen");renderList();
+};
+
+/* === RESPONDER / CERRAR === */
+tbody.onclick=e=>{
+  const tr=e.target.closest("tr");if(!tr)return;
+  const id=tr.dataset.id,i=loadTM().find(x=>x.id===id);if(!i)return;
+  if(i.estado==="Sin responder")openResponder(i);
+  else if(i.estado==="Atendido")openCerrar(i);
+};
+
+function openResponder(i){
+  respInfoBody.innerHTML=`<tr><td>Sector</td><td>${i.sector}</td></tr><tr><td>Equipo</td><td>${i.equipo}</td></tr><tr><td>Motivo</td><td>${i.motivo}</td></tr>`;
+  inpTecnicoAsignado.value="";
+  btnResponder.onclick=()=>{
+    if(!inpTecnicoAsignado.value)return alert("Seleccione técnico");
+    const l=loadTM(),it=l.find(x=>x.id===i.id);
+    if(it){it.tecnicoAsignado=inpTecnicoAsignado.value;it.estado="Atendido";saveTM(l);}
+    closeModal("modalResponder");renderList();
+  };
+  openModal("modalResponder");
+}
+
+function openCerrar(i){
+  cerrarInfoBody.innerHTML=`<tr><td>Sector</td><td>${i.sector}</td></tr><tr><td>Equipo</td><td>${i.equipo}</td></tr><tr><td>Motivo</td><td>${i.motivo}</td></tr>`;
+  inpTecnicoCierre.value="";inpFalla.value="";inpResolucion.value="";
+  btnCerrarTM.onclick=()=>{
+    if(!inpTecnicoCierre.value||!inpFalla.value||!inpResolucion.value)return alert("Complete todos los campos");
+    const l=loadTM(),it=l.find(x=>x.id===i.id);
+    if(it){it.tecnicoCierre=inpTecnicoCierre.value;it.falla=inpFalla.value;it.resolucion=inpResolucion.value;it.estado="Cerrado";it.closedAt=Date.now();saveTM(l);}
+    closeModal("modalCerrar");renderList();
+  };
+  openModal("modalCerrar");
+}
+
+/* === HISTORIAL === */
+const histBody=document.getElementById("histBody");
+[fQuery,fDesde,fHasta].forEach(inp=>inp.oninput=()=>renderHist());
+
+function renderHist(){
+  const l=loadTM().sort((a,b)=>(b.closedAt??b.createdAt)-(a.closedAt??a.createdAt));
+  const q=fQuery.value.toLowerCase(),d1=fDesde.value?new Date(fDesde.value):null,d2=fHasta.value?new Date(fHasta.value):null;
+  const filtered=l.filter(i=>{
+    const txt=(i.sector+i.equipo+i.motivo+i.responsable+i.falla+i.resolucion+i.estado).toLowerCase();
+    if(q && !txt.includes(q))return false;
+    const fecha=new Date(i.createdAt);
+    if(d1 && fecha<d1)return false;
+    if(d2 && fecha>d2)return false;
+    return true;
+  });
+  histBody.innerHTML="";
+  if(!filtered.length)return histBody.innerHTML='<tr><td colspan="11" class="muted">Sin registros</td></tr>';
+  filtered.forEach(i=>{
+    histBody.innerHTML+=`<tr><td>${i.sector}</td><td>${i.equipo}</td><td>${i.motivo}</td><td>${i.responsable}</td><td>${badge(i.estado)}</td><td>${i.falla||"—"}</td><td>${i.tecnicoCierre||"—"}</td><td>${i.resolucion||"—"}</td><td>${fmt(i.createdAt)}</td><td>${fmt(i.closedAt)}</td><td>${fmtDur((i.closedAt||Date.now())-i.createdAt)}</td></tr>`;
+  });
+  return filtered;
+}
+
+/* === ELIMINAR HISTORIAL === */
+btnDelHist.onclick=()=>{
+  const pass=prompt("Ingrese contraseña para eliminar el historial:");
+  if(pass!=="nordex123"){alert("Contraseña incorrecta.");return;}
+  if(confirm("¿Seguro que deseas eliminar todo el historial?")){
+    localStorage.removeItem(TM_KEY);
+    renderList();renderHist();
+  }
+};
+
+/* === EXPORTAR EXCEL Y PDF === */
+btnExcel.onclick=()=>{
+  const wb=XLSX.utils.book_new();
+  const filtered=renderHist();
+  const filters=[
+    ["Filtro de búsqueda:",fQuery.value||"—"],
+    ["Desde:",fDesde.value||"—"],
+    ["Hasta:",fHasta.value||"—"],["Hasta:",fHasta.value||"—"],[],["Sector","Equipo","Motivo","Responsable","Estado","Falla","Técnico Cierre","Resolución","Inicio","Cierre","Duración"]];
+  const rows=filtered.map(i=>[i.sector,i.equipo,i.motivo,i.responsable,i.estado,i.falla||"",i.tecnicoCierre||"",i.resolucion||"",fmt(i.createdAt),fmt(i.closedAt),fmtDur((i.closedAt||Date.now())-i.createdAt)]);
+  const ws=XLSX.utils.aoa_to_sheet([...filters,...rows]);
+  XLSX.utils.book_append_sheet(wb,ws,"Historial");
+  XLSX.writeFile(wb,"Historial_TiemposMuertos.xlsx");
+};
+
+btnPDF.onclick=()=>{
+  const { jsPDF }=window.jspdf;
+  const doc=new jsPDF("l","pt");
+  const filtered=renderHist();
+  doc.text("Historial de Tiempos Muertos",40,40);
+  doc.setFontSize(10);
+  doc.text(`Filtro: ${fQuery.value||"—"}`,40,55);
+  doc.text(`Desde: ${fDesde.value||"—"}  Hasta: ${fHasta.value||"—"}`,40,70);
+  const data=filtered.map(i=>[i.sector,i.equipo,i.motivo,i.responsable,i.estado,i.falla||"",i.tecnicoCierre||"",i.resolucion||"",fmt(i.createdAt),fmt(i.closedAt),fmtDur((i.closedAt||Date.now())-i.createdAt)]);
+  doc.autoTable({head:[["Sector","Equipo","Motivo","Responsable","Estado","Falla","Técnico Cierre","Resolución","Inicio","Cierre","Duración"]],body:data,startY:85,styles:{fontSize:7}});
+  doc.save("Historial_TiemposMuertos.pdf");
+};
+
+document.querySelectorAll("[data-close]").forEach(b=>b.onclick=()=>closeModal(b.dataset.close));
+function openModal(id){document.getElementById(id).style.display="flex";}
+function closeModal(id){document.getElementById(id).style.display="none";}
+if(isAuthed()){loginCard.style.display="none";appCard.style.display="block";renderList();}
+</script>
+<script>
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/sw.js");
+  });
+}
+</script>
+</body>
+</html>
