@@ -2,15 +2,16 @@
 const CACHE = "app-cache-v1";
 const OFFLINE_URL = "offline.html";
 const PRECACHE = [
-  "icons/icon-192.png",
-  "icons/icon-512.png",
   "index.html",
   "manifest.json",
+  "icons/icon-192.png",
+  "icons/icon-512.png",
   "offline.html",
+  "tiemposmuertosengemo.html/tiemposmuertoscontrol.html",
   "tiemposmuertosengemo.html/css/tiemposmuertos.css",
-  "tiemposmuertosengemo.html/img/logoengemo.png",
-  "tiemposmuertosengemo.html/tiemposmuertoscontrol.html"
+  "tiemposmuertosengemo.html/img/logoengemo.png"
 ];
+
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
