@@ -1,16 +1,15 @@
 // sw.js — generado automáticamente
 const CACHE = "app-cache-v1";
-const OFFLINE_URL = "/offline.html";
+const OFFLINE_URL = "offline.html";
 const PRECACHE = [
-  "/",
-  "/icons/icon-192.png",
-  "/icons/icon-512.png",
-  "/index.html",
-  "/manifest.json",
-  "/offline.html",
-  "/tiemposmuertosengemo.html/css/tiemposmuertos.css",
-  "/tiemposmuertosengemo.html/img/logoengemo.png",
-  "/tiemposmuertosengemo.html/tiemposmuertoscontrol.html"
+  "icons/icon-192.png",
+  "icons/icon-512.png",
+  "index.html",
+  "manifest.json",
+  "offline.html",
+  "tiemposmuertosengemo.html/css/tiemposmuertos.css",
+  "tiemposmuertosengemo.html/img/logoengemo.png",
+  "tiemposmuertosengemo.html/tiemposmuertoscontrol.html"
 ];
 
 self.addEventListener("install", (event) => {
